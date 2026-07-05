@@ -12,13 +12,13 @@ can cooperate.
 Base Nix/Rust/TOML profile:
 
 ```sh
-use flake ssh://git@codeberg.org/caniko/nix-opencode-lsp.git#opencode-lsp
+use flake git+ssh://git@codeberg.org/caniko/nix-opencode-lsp.git#opencode-lsp
 ```
 
 Python profile:
 
 ```sh
-use flake ssh://git@codeberg.org/caniko/nix-opencode-lsp.git#opencode-lsp-python
+use flake git+ssh://git@codeberg.org/caniko/nix-opencode-lsp.git#opencode-lsp-python
 ```
 
 Harbor flakes re-export compatible profiles. Prefer those in Rust/Python harbor
