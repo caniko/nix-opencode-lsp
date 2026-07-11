@@ -1,12 +1,74 @@
-{nixpkgs}: let
+{
+  nixpkgs,
+  opencodeLib,
+}: let
   inherit (nixpkgs) lib;
 
   profileEnabled = profiles: profile: builtins.elem profile profiles;
+  defaultPklLspHashes = {
+    linux-x64 = "sha256-hNrY6TXbC7zVZbPj1/VazvYyG6sUXSwJMSdQMEUrmjg=";
+    linux-arm64 = "sha256-pdtU4nJW8JifpKV362y0MCPXbQ0PqVETGrIr2MfU6JY=";
+    darwin-x64 = "sha256-1Of1OfnKD1kSVjuFqm9bzorWVLrZN2sCEn7VSMN1Reg=";
+    darwin-arm64 = "sha256-ceTKsmrZAmb2Sal/Nyfb1Dj8T+EFozimLH1kWNQmkHU=";
+  };
 in rec {
-  mkConfig = {
+  mkPklLspReleasePackage = {
+    pkgs,
+    version ? "0.1.0",
+    hashes ? defaultPklLspHashes,
+    owner ? "caniko",
+    repo ? "pkl-lsp",
+  }: let
+    targetForSystem = {
+      x86_64-linux = "linux-x64";
+      aarch64-linux = "linux-arm64";
+      x86_64-darwin = "darwin-x64";
+      aarch64-darwin = "darwin-arm64";
+    };
+    system = pkgs.stdenv.hostPlatform.system;
+    target =
+      targetForSystem.${system}
+      or (throw "pkl-lsp release assets are not available for ${system}");
+    extension =
+      if lib.hasPrefix "win32-" target
+      then "zip"
+      else "tar.gz";
+    executable =
+      if lib.hasPrefix "win32-" target
+      then "pkl-lsp.exe"
+      else "pkl-lsp";
+  in
+    pkgs.stdenvNoCC.mkDerivation {
+      pname = "pkl-lsp";
+      inherit version;
+      src = pkgs.fetchurl {
+        url = "https://codeberg.org/${owner}/${repo}/releases/download/${version}/pkl-lsp-${version}-${target}.${extension}";
+        hash =
+          hashes.${target}
+          or (throw "missing pkl-lsp release hash for ${target}");
+      };
+      unpackPhase = ''
+        runHook preUnpack
+        tar -xzf "$src"
+        runHook postUnpack
+      '';
+      installPhase = ''
+        mkdir -p "$out/bin"
+        cp "${executable}" "$out/bin/${executable}"
+        chmod 0755 "$out/bin/${executable}"
+        ${
+          lib.optionalString (executable != "pkl-lsp") ''
+            ln -s "$out/bin/${executable}" "$out/bin/pkl-lsp"
+          ''
+        }
+      '';
+    };
+
+  mkServers = {
     pkgs,
     profiles ? [],
     rustAnalyzer ? pkgs.rust-analyzer,
+    pklLsp ? null,
     extraLsp ? {},
   }: let
     baseLsp = {
@@ -29,70 +91,66 @@ in rec {
         extensions = [".py" ".pyi"];
       };
     };
-  in {
-    "$schema" = "https://opencode.ai/config.json";
-    lsp = baseLsp // pythonLsp // extraLsp;
-  };
+
+    pklLspConfig =
+      lib.optionalAttrs (profileEnabled profiles "pkl") {
+        pkl = {
+          command = ["${pklLsp}/bin/pkl-lsp" "--stdio"];
+          extensions = [".pkl"];
+        };
+      };
+  in
+    baseLsp // pythonLsp // pklLspConfig // extraLsp;
+
+  mkConfig = args:
+    opencodeLib.mkLspConfig {
+      servers = mkServers args;
+    };
 
   mkConfigPackage = {
     pkgs,
     profiles ? [],
     rustAnalyzer ? pkgs.rust-analyzer,
+    pklLsp ? null,
     extraLsp ? {},
   }:
-    pkgs.writeText "opencode-lsp-config.json" (builtins.toJSON (mkConfig {
-      inherit pkgs profiles rustAnalyzer extraLsp;
-    }));
+    assert !profileEnabled profiles "pkl" || pklLsp != null;
+    opencodeLib.mkLspConfigPackage {
+      inherit pkgs;
+      servers = mkServers {
+        inherit pkgs profiles rustAnalyzer pklLsp extraLsp;
+      };
+    };
 
   mkShell = {
     pkgs,
     profiles ? [],
     rustAnalyzer ? pkgs.rust-analyzer,
+    pklLsp ? null,
     extraLsp ? {},
     extraPackages ? [],
     extraShellHook ? "",
   }: let
-    configFile = mkConfigPackage {
-      inherit pkgs profiles rustAnalyzer extraLsp;
-    };
     pythonPackages = lib.optionals (profileEnabled profiles "python") [
       pkgs.basedpyright
       pkgs.ruff
     ];
+    pklPackages = lib.optionals (profileEnabled profiles "pkl") [pklLsp];
   in
-    pkgs.mkShellNoCC {
+    assert !profileEnabled profiles "pkl" || pklLsp != null;
+    opencodeLib.mkLspShell {
+      inherit pkgs extraShellHook;
+      servers = mkServers {
+        inherit pkgs profiles rustAnalyzer pklLsp extraLsp;
+      };
       packages =
         [
-          pkgs.jq
           pkgs.nixd
           pkgs.taplo
           rustAnalyzer
         ]
         ++ pythonPackages
+        ++ pklPackages
         ++ extraPackages;
-
-      shellHook = ''
-        __opencode_lsp_config=${configFile}
-        if [ -n "''${OPENCODE_CONFIG_CONTENT:-}" ]; then
-          OPENCODE_CONFIG_CONTENT="$(
-            printf '%s' "$OPENCODE_CONFIG_CONTENT" \
-              | ${pkgs.jq}/bin/jq -c --slurpfile opencodeLsp "$__opencode_lsp_config" '
-                  . as $existing
-                  | $opencodeLsp[0] as $incoming
-                  | $existing * $incoming
-                  | .lsp = (($existing.lsp // {}) + ($incoming.lsp // {}))
-                '
-          )"
-        else
-          OPENCODE_CONFIG_CONTENT="$(${pkgs.coreutils}/bin/cat "$__opencode_lsp_config")"
-        fi
-
-        export OPENCODE_CONFIG_CONTENT
-        export OPENCODE_DISABLE_LSP_DOWNLOAD=true
-        export OPENCODE_EXPERIMENTAL_LSP_TOOL=true
-        unset __opencode_lsp_config
-
-        ${extraShellHook}
-      '';
     };
 }
