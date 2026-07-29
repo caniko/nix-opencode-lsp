@@ -41,14 +41,18 @@
         ]
       },
       "locked": {
-        "lastModified": 1783440617,
-        "narHash": "sha256-MiOJQmVwsn3fMehMb8sLEso7JGdq+V6uXwMfDdfvol4=",
-        "path": "/data/nvme0/can/Projects/opencode",
-        "type": "path"
+        "lastModified": 1784228335,
+        "narHash": "sha256-IgTUUAf6jANztldsQeRLGWWUlCTv2kxBjSjB4QOY14s=",
+        "owner": "caniko",
+        "repo": "opencode",
+        "rev": "9f11c559cdda78c520161c13ac9dca9a79e8a007",
+        "type": "github"
       },
       "original": {
-        "path": "/data/nvme0/can/Projects/opencode",
-        "type": "path"
+        "owner": "caniko",
+        "repo": "opencode",
+        "rev": "9f11c559cdda78c520161c13ac9dca9a79e8a007",
+        "type": "github"
       }
     },
     "root": {
