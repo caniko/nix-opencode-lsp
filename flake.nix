@@ -4,23 +4,15 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    opencode = {
-      url = "path:/data/nvme0/can/Projects/opencode";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs = {
     self,
     nixpkgs,
     flake-utils,
-    opencode,
     ...
   }: let
-    lib = import ./lib {
-      inherit nixpkgs;
-      opencodeLib = opencode.lib;
-    };
+    lib = import ./lib {inherit nixpkgs;};
   in
     {
       inherit lib;

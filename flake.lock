@@ -34,28 +34,10 @@
         "type": "github"
       }
     },
-    "opencode": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1783440617,
-        "narHash": "sha256-MiOJQmVwsn3fMehMb8sLEso7JGdq+V6uXwMfDdfvol4=",
-        "path": "/data/nvme0/can/Projects/opencode",
-        "type": "path"
-      },
-      "original": {
-        "path": "/data/nvme0/can/Projects/opencode",
-        "type": "path"
-      }
-    },
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs",
-        "opencode": "opencode"
+        "nixpkgs": "nixpkgs"
       }
     },
     "systems": {
