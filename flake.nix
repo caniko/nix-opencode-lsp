@@ -4,26 +4,15 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    opencode = {
-      # Hosted CI and downstream flakes must not depend on the developer's
-      # local OpenCode checkout. Pin the exact public fork revision that
-      # provides the Pkl LSP integration.
-      url = "github:caniko/opencode/9f11c559cdda78c520161c13ac9dca9a79e8a007";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs = {
     self,
     nixpkgs,
     flake-utils,
-    opencode,
     ...
   }: let
-    lib = import ./lib {
-      inherit nixpkgs;
-      opencodeLib = opencode.lib;
-    };
+    lib = import ./lib {inherit nixpkgs;};
   in
     {
       inherit lib;

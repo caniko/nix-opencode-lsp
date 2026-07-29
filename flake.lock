@@ -34,32 +34,10 @@
         "type": "github"
       }
     },
-    "opencode": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1784228335,
-        "narHash": "sha256-IgTUUAf6jANztldsQeRLGWWUlCTv2kxBjSjB4QOY14s=",
-        "owner": "caniko",
-        "repo": "opencode",
-        "rev": "9f11c559cdda78c520161c13ac9dca9a79e8a007",
-        "type": "github"
-      },
-      "original": {
-        "owner": "caniko",
-        "repo": "opencode",
-        "rev": "9f11c559cdda78c520161c13ac9dca9a79e8a007",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs",
-        "opencode": "opencode"
+        "nixpkgs": "nixpkgs"
       }
     },
     "systems": {

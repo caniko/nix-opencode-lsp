@@ -1,6 +1,5 @@
 {
   nixpkgs,
-  opencodeLib,
 }: let
   inherit (nixpkgs) lib;
 
@@ -102,10 +101,37 @@ in rec {
   in
     baseLsp // pythonLsp // pklLspConfig // extraLsp;
 
+  mkLspConfig = {servers}: {lsp = servers;};
+
+  mkLspConfigPackage = {
+    pkgs,
+    servers,
+  }:
+    pkgs.writeText "opencode-lsp-config.json" (builtins.toJSON (mkLspConfig {inherit servers;}));
+
+  mkLspShell = {
+    pkgs,
+    servers,
+    extraShellHook ? "",
+    packages ? [],
+  }:
+    let
+      config = mkLspConfigPackage {inherit pkgs servers;};
+    in
+      pkgs.mkShell {
+        packages = [pkgs.jq] ++ packages;
+        shellHook = ''
+          existing="''${OPENCODE_CONFIG_CONTENT:-{}}"
+          export OPENCODE_CONFIG_CONTENT="$(${pkgs.jq}/bin/jq -cn --argjson existing "$existing" --slurpfile incoming ${config} '
+            $existing * $incoming[0]
+            | .lsp = (($existing.lsp // {}) + ($incoming[0].lsp // {}))
+          ')"
+          ${extraShellHook}
+        '';
+      };
+
   mkConfig = args:
-    opencodeLib.mkLspConfig {
-      servers = mkServers args;
-    };
+    mkLspConfig {servers = mkServers args;};
 
   mkConfigPackage = {
     pkgs,
@@ -115,7 +141,7 @@ in rec {
     extraLsp ? {},
   }:
     assert !profileEnabled profiles "pkl" || pklLsp != null;
-    opencodeLib.mkLspConfigPackage {
+    mkLspConfigPackage {
       inherit pkgs;
       servers = mkServers {
         inherit pkgs profiles rustAnalyzer pklLsp extraLsp;
@@ -138,7 +164,7 @@ in rec {
     pklPackages = lib.optionals (profileEnabled profiles "pkl") [pklLsp];
   in
     assert !profileEnabled profiles "pkl" || pklLsp != null;
-    opencodeLib.mkLspShell {
+    mkLspShell {
       inherit pkgs extraShellHook;
       servers = mkServers {
         inherit pkgs profiles rustAnalyzer pklLsp extraLsp;
