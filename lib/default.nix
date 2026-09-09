@@ -1,6 +1,4 @@
-{
-  nixpkgs,
-}: let
+{nixpkgs}: let
   inherit (nixpkgs) lib;
 
   profileEnabled = profiles: profile: builtins.elem profile profiles;
@@ -91,13 +89,12 @@ in rec {
       };
     };
 
-    pklLspConfig =
-      lib.optionalAttrs (profileEnabled profiles "pkl") {
-        pkl = {
-          command = ["${pklLsp}/bin/pkl-lsp" "--stdio"];
-          extensions = [".pkl"];
-        };
+    pklLspConfig = lib.optionalAttrs (profileEnabled profiles "pkl") {
+      pkl = {
+        command = ["${pklLsp}/bin/pkl-lsp" "--stdio"];
+        extensions = [".pkl"];
       };
+    };
   in
     baseLsp // pythonLsp // pklLspConfig // extraLsp;
 
@@ -114,21 +111,21 @@ in rec {
     servers,
     extraShellHook ? "",
     packages ? [],
-  }:
-    let
-      config = mkLspConfigPackage {inherit pkgs servers;};
-    in
-      pkgs.mkShell {
-        packages = [pkgs.jq] ++ packages;
-        shellHook = ''
-          existing="''${OPENCODE_CONFIG_CONTENT:-{}}"
-          export OPENCODE_CONFIG_CONTENT="$(${pkgs.jq}/bin/jq -cn --argjson existing "$existing" --slurpfile incoming ${config} '
-            $existing * $incoming[0]
-            | .lsp = (($existing.lsp // {}) + ($incoming[0].lsp // {}))
-          ')"
-          ${extraShellHook}
-        '';
-      };
+  }: let
+    config = mkLspConfigPackage {inherit pkgs servers;};
+  in
+    pkgs.mkShell {
+      packages = [pkgs.jq] ++ packages;
+      shellHook = ''
+        existing="''${OPENCODE_CONFIG_CONTENT:-"{}"}"
+        merged="$(${pkgs.jq}/bin/jq -cn --argjson existing "$existing" --slurpfile incoming ${config} '
+          $existing * $incoming[0]
+          | .lsp = (($existing.lsp // {}) + ($incoming[0].lsp // {}))
+        ')" || return 1
+        export OPENCODE_CONFIG_CONTENT="$merged"
+        ${extraShellHook}
+      '';
+    };
 
   mkConfig = args:
     mkLspConfig {servers = mkServers args;};
@@ -141,12 +138,12 @@ in rec {
     extraLsp ? {},
   }:
     assert !profileEnabled profiles "pkl" || pklLsp != null;
-    mkLspConfigPackage {
-      inherit pkgs;
-      servers = mkServers {
-        inherit pkgs profiles rustAnalyzer pklLsp extraLsp;
+      mkLspConfigPackage {
+        inherit pkgs;
+        servers = mkServers {
+          inherit pkgs profiles rustAnalyzer pklLsp extraLsp;
+        };
       };
-    };
 
   mkShell = {
     pkgs,
@@ -164,19 +161,19 @@ in rec {
     pklPackages = lib.optionals (profileEnabled profiles "pkl") [pklLsp];
   in
     assert !profileEnabled profiles "pkl" || pklLsp != null;
-    mkLspShell {
-      inherit pkgs extraShellHook;
-      servers = mkServers {
-        inherit pkgs profiles rustAnalyzer pklLsp extraLsp;
+      mkLspShell {
+        inherit pkgs extraShellHook;
+        servers = mkServers {
+          inherit pkgs profiles rustAnalyzer pklLsp extraLsp;
+        };
+        packages =
+          [
+            pkgs.nixd
+            pkgs.taplo
+            rustAnalyzer
+          ]
+          ++ pythonPackages
+          ++ pklPackages
+          ++ extraPackages;
       };
-      packages =
-        [
-          pkgs.nixd
-          pkgs.taplo
-          rustAnalyzer
-        ]
-        ++ pythonPackages
-        ++ pklPackages
-        ++ extraPackages;
-    };
 }
