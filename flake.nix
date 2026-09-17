@@ -143,6 +143,13 @@
               fi
               test "$OPENCODE_CONFIG_CONTENT" = "not-json"
 
+              OPENCODE_CONFIG_CONTENT='not-json'
+              export OPENCODE_CONFIG_CONTENT shellHook
+              if DIRENV_IN_ENVRC=1 bash -c 'run() { eval "$shellHook"; }; run; echo SENTINEL'; then
+                echo "expected malformed OPENCODE_CONFIG_CONTENT to exit under direnv" >&2
+                exit 1
+              fi
+
               touch "$out"
             '';
         };
