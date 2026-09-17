@@ -121,7 +121,13 @@ in rec {
         merged="$(${pkgs.jq}/bin/jq -cn --argjson existing "$existing" --slurpfile incoming ${config} '
           $existing * $incoming[0]
           | .lsp = (($existing.lsp // {}) + ($incoming[0].lsp // {}))
-        ')" || return 1
+        ')" || {
+          # direnv dumps env after a failing return; exit stops that eval.
+          if [ -n "''${DIRENV_IN_ENVRC:-}" ]; then
+            exit 1
+          fi
+          return 1
+        }
         export OPENCODE_CONFIG_CONTENT="$merged"
         ${extraShellHook}
       '';
