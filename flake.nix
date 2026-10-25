@@ -51,6 +51,17 @@
         };
 
         checks = {
+          # The release binary only runs where its glibc is a recorded runtime
+          # reference (build sandboxes, closures copied to other hosts).
+          pkl-lsp-runtime-closure = pkgs.runCommand "pkl-lsp-runtime-closure" {} (
+            nixpkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+              grep -q -- '-glibc-' ${pkgs.writeClosure [pklLsp]}
+            ''
+            + ''
+              touch "$out"
+            ''
+          );
+
           config-base-shape =
             pkgs.runCommand "opencode-lsp-config-base-shape" {
               nativeBuildInputs = [pkgs.jq];
