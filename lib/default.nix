@@ -38,6 +38,10 @@ in rec {
     pkgs.stdenvNoCC.mkDerivation {
       pname = "pkl-lsp";
       inherit version;
+      # The Linux release links against a foreign glibc store path that would
+      # otherwise be an unrecorded reference, absent from sandboxes and closures.
+      nativeBuildInputs = lib.optional pkgs.stdenv.hostPlatform.isLinux pkgs.autoPatchelfHook;
+      buildInputs = lib.optional pkgs.stdenv.hostPlatform.isLinux pkgs.stdenv.cc.cc.lib;
       src = pkgs.fetchurl {
         url = "https://codeberg.org/${owner}/${repo}/releases/download/${version}/pkl-lsp-${version}-${target}.${extension}";
         hash =
